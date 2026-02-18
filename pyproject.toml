@@ -1,0 +1,22 @@
+[build-system]
+requires = ["scikit-build-core~=0.11.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "halide-flatbuffers"
+version = "23.5.26"
+maintainers = [{ name = "Alex Reinking", email = "areinking@adobe.com" }]
+license = { file = "./repo/LICENSE" }
+readme = "./repo/README.md"
+requires-python = ">=3.10"
+
+[tool.scikit-build]
+cmake.version = ">=3.28"
+cmake.source-dir = "repo"
+wheel.install-dir = "halide-flatbuffers"
+
+# No Python extension modules, so use py3-none tag instead of cpXYZ
+wheel.py-api = "py3"
+
+[tool.scikit-build.cmake.define]
+FLATBUFFERS_BUILD_TESTS = false
