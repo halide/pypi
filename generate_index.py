@@ -22,7 +22,9 @@ TOKEN = os.environ.get("GITHUB_TOKEN")
 OUT_DIR = Path(os.environ.get("OUT_DIR", "_site"))
 
 # Longest-prefix-first so "halide-llvm-22.1.7" matches "halide-llvm", not "halide".
-KNOWN_PROJECTS = sorted(["halide-llvm", "halide"], key=len, reverse=True)
+KNOWN_PROJECTS = sorted(
+    ["halide-llvm", "halide", "halide-flatbuffers", "halide-wabt"], key=len, reverse=True
+)
 
 
 def normalize(name: str) -> str:
