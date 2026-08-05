@@ -1,8 +1,14 @@
 name: Rebuild index
 
+# Deliberately workflow_dispatch-only, not "on: release: published". Every
+# producer repo already calls `gh workflow run rebuild-index.yml` explicitly
+# after publishing (see README), so nothing depends on the release webhook --
+# and relying on both was actively harmful: a single build commonly publishes
+# multiple releases (e.g. halide-wheel-deps builds halide-flatbuffers and
+# halide-wabt together), so the implicit per-release webhook plus the
+# explicit dispatch fire 3 near-simultaneous runs that race for the same
+# GitHub Pages deployment lock and fail/cancel each other.
 on:
-  release:
-    types: [published]
   workflow_dispatch: {}
 
 permissions:

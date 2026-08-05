@@ -15,14 +15,20 @@ Static PyPI-compatible package index for Halide project packages, serving
   `{filename: sha256}` for its other assets, so the generated index can
   include integrity hashes without downloading large files just to hash them.
 - `.github/workflows/rebuild-index.yml` regenerates the full PEP 503 `simple/`
-  index from this repo's Releases API and republishes it to GitHub Pages,
-  triggered on every published release or manually via `workflow_dispatch`.
+  index from this repo's Releases API and republishes it to GitHub Pages.
+  It's `workflow_dispatch`-only, deliberately **not** triggered by
+  `release: published`: a single build commonly creates multiple releases
+  (e.g. `halide-wheel-deps` publishes `halide-flatbuffers` and `halide-wabt`
+  together), and the per-release webhook plus an explicit dispatch would fire
+  several near-simultaneous runs that race for the same GitHub Pages
+  deployment lock and fail/cancel each other. Every producer repo calls the
+  dispatch explicitly instead (below), so nothing relies on the webhook.
 
 ## Publishing a new package version
 
-From the producing repo's CI (`halide-llvm` or `Halide`), authenticate with
-the `PYPI_RELEASES_TOKEN` org secret (fine-grained PAT, `contents: write` on
-this repo only) and:
+From the producing repo's CI (`halide-llvm`, `Halide`, or `halide-wheel-deps`),
+authenticate with the `PYPI_RELEASES_TOKEN` org secret (fine-grained PAT,
+`contents: write` + `actions: write` on this repo only) and:
 
 ```sh
 gh release create "<project>@<version>" dist/*.whl manifest.json \
@@ -31,9 +37,7 @@ gh release create "<project>@<version>" dist/*.whl manifest.json \
 gh release upload "<project>@<version>" dist/*.whl manifest.json \
   --repo halide/pypi --clobber
 
-# Explicitly trigger a rebuild rather than relying on the release webhook
-# (gh release upload --clobber on an existing release does not fire a new
-# "published" event):
+# Always trigger the rebuild explicitly -- there is no implicit webhook:
 gh workflow run rebuild-index.yml --repo halide/pypi
 ```
 
