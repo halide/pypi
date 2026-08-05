@@ -7,9 +7,10 @@ Static PyPI-compatible package index for Halide project packages, serving
 
 - Distribution files (wheels/sdists) are uploaded as GitHub Release **assets**
   in this repo. Nothing else lives here except the generated index.
-- Release tags are `<project>-<version>`, e.g. `halide-llvm-22.1.7` or
-  `halide-dev-abc1234`. `<project>` must be one of the names listed in
-  `KNOWN_PROJECTS` in `generate_index.py`.
+- Release tags are `<project>@<version>`, e.g. `halide-llvm@22.1.7` or
+  `halide@19.0.1.dev123+g1a2b3c4d`. `@` can't appear in a project name or a
+  PEP 440 version, so the split is unambiguous -- any tag matching this
+  shape is picked up automatically, no registry to update.
 - An optional `manifest.json` asset attached to a release maps
   `{filename: sha256}` for its other assets, so the generated index can
   include integrity hashes without downloading large files just to hash them.
@@ -24,10 +25,10 @@ the `PYPI_RELEASES_TOKEN` org secret (fine-grained PAT, `contents: write` on
 this repo only) and:
 
 ```sh
-gh release create "<project>-<version>" dist/*.whl manifest.json \
-  --repo halide/pypi --title "<project>-<version>" --notes "Automated build"
+gh release create "<project>@<version>" dist/*.whl manifest.json \
+  --repo halide/pypi --title "<project>@<version>" --notes "Automated build"
 # or, if the tag already exists (e.g. a re-run):
-gh release upload "<project>-<version>" dist/*.whl manifest.json \
+gh release upload "<project>@<version>" dist/*.whl manifest.json \
   --repo halide/pypi --clobber
 
 # Explicitly trigger a rebuild rather than relying on the release webhook

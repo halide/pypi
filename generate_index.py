@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Generate a static PEP 503 "simple" index from this repo's GitHub Releases.
 
-Each release is expected to be tagged "<project>-<version>", where <project>
-is one of KNOWN_PROJECTS below. Release assets are the actual distribution
-files (wheels/sdists); an optional "manifest.json" asset attached to the same
-release maps filename -> sha256 so we can include integrity hashes without
-downloading multi-hundred-MB files just to hash them.
+Each release is tagged "<project>@<version>" (e.g. "halide-llvm@22.1.7").
+"@" can't appear in a project name or a PEP 440 version, so the split is
+unambiguous -- no hardcoded project registry needed. Release assets are the
+actual distribution files (wheels/sdists); an optional "manifest.json" asset
+attached to the same release maps filename -> sha256 so we can include
+integrity hashes without downloading multi-hundred-MB files just to hash
+them.
 """
 
 from __future__ import annotations
@@ -20,11 +22,6 @@ from pathlib import Path
 REPO = os.environ.get("GITHUB_REPOSITORY", "halide/pypi")
 TOKEN = os.environ.get("GITHUB_TOKEN")
 OUT_DIR = Path(os.environ.get("OUT_DIR", "_site"))
-
-# Longest-prefix-first so "halide-llvm-22.1.7" matches "halide-llvm", not "halide".
-KNOWN_PROJECTS = sorted(
-    ["halide-llvm", "halide", "halide-flatbuffers", "halide-wabt"], key=len, reverse=True
-)
 
 
 def normalize(name: str) -> str:
@@ -54,10 +51,10 @@ def list_all_releases() -> list[dict]:
 
 
 def project_for_tag(tag: str) -> str | None:
-    for project in KNOWN_PROJECTS:
-        if tag == project or tag.startswith(project + "-"):
-            return project
-    return None
+    project, sep, _version = tag.partition("@")
+    if not sep or not project:
+        return None
+    return project
 
 
 def fetch_manifest(assets: list[dict]) -> dict[str, str]:
@@ -78,7 +75,7 @@ def collect_files() -> dict[str, list[dict]]:
         tag = release["tag_name"]
         project = project_for_tag(tag)
         if project is None:
-            print(f"warning: skipping release {tag!r} (no known project prefix)", file=sys.stderr)
+            print(f"warning: skipping release {tag!r} (expected '<project>@<version>')", file=sys.stderr)
             continue
         assets = release.get("assets", [])
         manifest = fetch_manifest(assets)
