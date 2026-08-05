@@ -4,10 +4,10 @@
 Each release is tagged "<project>@<version>" (e.g. "halide-llvm@22.1.7").
 "@" can't appear in a project name or a PEP 440 version, so the split is
 unambiguous -- no hardcoded project registry needed. Release assets are the
-actual distribution files (wheels/sdists); an optional "manifest.json" asset
-attached to the same release maps filename -> sha256 so we can include
-integrity hashes without downloading multi-hundred-MB files just to hash
-them.
+actual distribution files (wheels/sdists); GitHub computes and exposes a
+sha256 "digest" for every uploaded asset via the Releases API, so we read
+that directly for integrity hashes rather than maintaining our own sidecar
+manifest.
 """
 
 from __future__ import annotations
@@ -57,15 +57,11 @@ def project_for_tag(tag: str) -> str | None:
     return project
 
 
-def fetch_manifest(assets: list[dict]) -> dict[str, str]:
-    for asset in assets:
-        if asset["name"] == "manifest.json":
-            req = urllib.request.Request(asset["browser_download_url"])
-            if TOKEN:
-                req.add_header("Authorization", f"Bearer {TOKEN}")
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                return json.load(resp)
-    return {}
+def sha256_from_digest(asset: dict) -> str | None:
+    digest = asset.get("digest")
+    if digest and digest.startswith("sha256:"):
+        return digest.removeprefix("sha256:")
+    return None
 
 
 def collect_files() -> dict[str, list[dict]]:
@@ -77,18 +73,19 @@ def collect_files() -> dict[str, list[dict]]:
         if project is None:
             print(f"warning: skipping release {tag!r} (expected '<project>@<version>')", file=sys.stderr)
             continue
-        assets = release.get("assets", [])
-        manifest = fetch_manifest(assets)
         bucket = files_by_project.setdefault(normalize(project), [])
-        for asset in assets:
+        for asset in release.get("assets", []):
             filename = asset["name"]
+            # Older migrated releases carry a manifest.json sidecar from
+            # before GitHub's per-asset digest was in use; skip it, it's not
+            # an installable file.
             if filename == "manifest.json":
                 continue
             bucket.append(
                 {
                     "filename": filename,
                     "url": asset["browser_download_url"],
-                    "sha256": manifest.get(filename),
+                    "sha256": sha256_from_digest(asset),
                 }
             )
     return files_by_project

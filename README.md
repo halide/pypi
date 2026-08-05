@@ -11,9 +11,11 @@ Static PyPI-compatible package index for Halide project packages, serving
   `halide@19.0.1.dev123+g1a2b3c4d`. `@` can't appear in a project name or a
   PEP 440 version, so the split is unambiguous -- any tag matching this
   shape is picked up automatically, no registry to update.
-- An optional `manifest.json` asset attached to a release maps
-  `{filename: sha256}` for its other assets, so the generated index can
-  include integrity hashes without downloading large files just to hash them.
+- Integrity hashes in the generated index come from the `digest` field
+  GitHub already computes and exposes per asset via the Releases API
+  (`sha256:<hex>`) -- no separate manifest to generate or upload. (Some
+  early migrated releases still carry a leftover `manifest.json` sidecar
+  from before this was in use; the generator ignores it.)
 - `.github/workflows/rebuild-index.yml` regenerates the full PEP 503 `simple/`
   index from this repo's Releases API and republishes it to GitHub Pages.
   It's `workflow_dispatch`-only, deliberately **not** triggered by
@@ -31,10 +33,10 @@ authenticate with the `PYPI_RELEASES_TOKEN` org secret (fine-grained PAT,
 `contents: write` + `actions: write` on this repo only) and:
 
 ```sh
-gh release create "<project>@<version>" dist/*.whl manifest.json \
+gh release create "<project>@<version>" dist/*.whl \
   --repo halide/pypi --title "<project>@<version>" --notes "Automated build"
 # or, if the tag already exists (e.g. a re-run):
-gh release upload "<project>@<version>" dist/*.whl manifest.json \
+gh release upload "<project>@<version>" dist/*.whl \
   --repo halide/pypi --clobber
 
 # Always trigger the rebuild explicitly -- there is no implicit webhook:
