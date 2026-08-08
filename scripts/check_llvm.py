@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from collections.abc import Callable, Iterable
@@ -10,6 +11,7 @@ from pathlib import Path
 
 from github_releases import GitHubReleases
 from package_metadata import project_metadata
+from platforms import wheel_matrix
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "packages" / "halide-llvm"))
 from _version_provider import get_commit_info, version_from_tag
@@ -57,6 +59,9 @@ def main() -> None:
     print(f"{resolved_ref}: should_build={str(build).lower()}")
     with open(os.environ["GITHUB_OUTPUT"], "a") as output:
         output.write(f"should_build={str(build).lower()}\nllvm_ref={resolved_ref}\n")
+        output.write(
+            f"matrix={json.dumps({'include': wheel_matrix(package_name(), llvm=True)}, separators=(',', ':'))}\n"
+        )
 
 
 if __name__ == "__main__":

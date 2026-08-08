@@ -1,0 +1,136 @@
+name: Build wheel
+description: Build, retag, repair, and upload a wheel for one platform.
+
+inputs:
+  package:
+    required: true
+  platform:
+    required: true
+  artifact-name:
+    required: true
+  container:
+    required: false
+    default: ""
+  docker-image:
+    required: false
+    default: ""
+  manylinux-plat:
+    required: false
+    default: ""
+  msvc-arch:
+    required: false
+    default: ""
+  wheel-plat:
+    required: false
+    default: ""
+  pin-gcc12:
+    required: false
+    default: "false"
+  toolchain:
+    required: false
+    default: ""
+  llvm-ref:
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Set up GCC 12 and Python (manylinux)
+      if: inputs.container != ''
+      shell: bash
+      run: |
+        yum install -y gcc-toolset-12-gcc-c++
+        echo "/opt/rh/gcc-toolset-12/root/usr/bin" >> "$GITHUB_PATH"
+        echo "/opt/python/cp312-cp312/bin" >> "$GITHUB_PATH"
+
+    - name: Set up Python
+      if: inputs.container == '' && inputs.docker-image == ''
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Set up MSVC
+      if: inputs.msvc-arch != ''
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: ${{ inputs.msvc-arch }}
+
+    - name: Build wheel
+      if: inputs.docker-image == ''
+      shell: bash
+      env:
+        PACKAGE: ${{ inputs.package }}
+        TOOLCHAIN: ${{ inputs.toolchain }}
+        HALIDE_LLVM_REF: ${{ inputs.llvm-ref }}
+      run: |
+        pip install cmake ninja
+        arguments=("$PACKAGE" -w dist/ -v)
+        if [[ -n "$TOOLCHAIN" ]]; then
+          arguments+=("--config-settings=cmake.define.CMAKE_TOOLCHAIN_FILE=$GITHUB_WORKSPACE/$PACKAGE/toolchains/$TOOLCHAIN")
+        fi
+        pip wheel "${arguments[@]}"
+
+    - name: Build wheel (docker)
+      if: inputs.docker-image != ''
+      shell: bash
+      env:
+        PACKAGE: ${{ inputs.package }}
+        DOCKER_IMAGE: ${{ inputs.docker-image }}
+        PIN_GCC12: ${{ inputs.pin-gcc12 }}
+        TOOLCHAIN: ${{ inputs.toolchain }}
+        HALIDE_LLVM_REF: ${{ inputs.llvm-ref }}
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        docker run --rm -v "${{ github.workspace }}:/project" -w /project \
+          -e PACKAGE -e TOOLCHAIN -e HALIDE_LLVM_REF -e GITHUB_TOKEN -e PIN_GCC12 \
+          "$DOCKER_IMAGE" bash -c '
+            set -euo pipefail
+            if [ "$PIN_GCC12" = true ]; then
+              yum install -y gcc-toolset-12-gcc-c++;
+              export PATH="/opt/rh/gcc-toolset-12/root/usr/bin:$PATH";
+            fi
+            export PATH="/opt/python/cp312-cp312/bin:$PATH"
+            pip install cmake ninja
+            arguments=("$PACKAGE" -w dist/ -v)
+            if [ -n "$TOOLCHAIN" ]; then
+              arguments+=("--config-settings=cmake.define.CMAKE_TOOLCHAIN_FILE=/project/$PACKAGE/toolchains/$TOOLCHAIN")
+            fi
+            pip wheel "${arguments[@]}"
+          '
+
+    - name: Retag wheel
+      if: inputs.wheel-plat != ''
+      shell: bash
+      run: |
+        pip install wheel
+        wheel tags --platform-tag ${{ inputs.wheel-plat }} --remove dist/*.whl
+
+    - name: Repair wheel (auditwheel)
+      if: inputs.manylinux-plat != '' && inputs.docker-image == ''
+      shell: bash
+      run: |
+        pip install auditwheel
+        auditwheel repair --plat ${{ inputs.manylinux-plat }} -w dist/ dist/*.whl
+        rm -f dist/*-linux_*.whl
+
+    - name: Repair wheel (auditwheel/docker)
+      if: inputs.manylinux-plat != '' && inputs.docker-image != ''
+      shell: bash
+      env:
+        DOCKER_IMAGE: ${{ inputs.docker-image }}
+      run: |
+        docker run --rm -v "${{ github.workspace }}:/project" -w /project \
+          "$DOCKER_IMAGE" bash -c '
+            set -euo pipefail
+            export PATH="/opt/python/cp312-cp312/bin:$PATH"
+            pip install auditwheel
+            auditwheel repair --plat ${{ inputs.manylinux-plat }} -w dist/ dist/*.whl
+            rm -f dist/*-linux_*.whl
+          '
+
+    - name: Upload wheel
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: dist/*.whl

@@ -11,43 +11,7 @@ from pathlib import Path
 
 from github_releases import GitHubReleases
 from package_metadata import project_identity as metadata_project_identity
-
-PLATFORMS = (
-    {
-        "platform": "x86-64-linux",
-        "runner": "ubuntu-latest",
-        "container": "quay.io/pypa/manylinux_2_28_x86_64",
-        "manylinux_plat": "manylinux_2_28_x86_64",
-    },
-    {
-        "platform": "x86-32-linux",
-        "runner": "ubuntu-latest",
-        "docker_image": "quay.io/pypa/manylinux_2_28_i686",
-        "manylinux_plat": "manylinux_2_28_i686",
-        "pin_gcc12": True,
-    },
-    {
-        "platform": "arm-64-linux",
-        "runner": "ubuntu-24.04-arm",
-        "container": "quay.io/pypa/manylinux_2_28_aarch64",
-        "manylinux_plat": "manylinux_2_28_aarch64",
-    },
-    {
-        "platform": "arm-32-linux",
-        "runner": "ubuntu-24.04-arm",
-        "docker_image": "quay.io/pypa/manylinux_2_31_armv7l",
-        "manylinux_plat": "manylinux_2_31_armv7l",
-    },
-    {"platform": "x86-64-macos", "runner": "macos-15-intel"},
-    {"platform": "arm-64-macos", "runner": "macos-15"},
-    {"platform": "x86-64-windows", "runner": "windows-latest", "msvc_arch": "amd64"},
-    {
-        "platform": "x86-32-windows",
-        "runner": "windows-latest",
-        "msvc_arch": "amd64_x86",
-        "wheel_plat": "win32",
-    },
-)
+from platforms import wheel_matrix
 
 
 def project_identity(package_dir: Path) -> tuple[str, str]:
@@ -64,7 +28,7 @@ def missing_package_matrix(
         needed = not release_exists(tag)
         print(f"{tag}: {'needed' if needed else 'already released'}")
         if needed:
-            matrix.extend({"pkg": package.name, **platform} for platform in PLATFORMS)
+            matrix.extend(wheel_matrix(package.name))
     return matrix
 
 

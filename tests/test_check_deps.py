@@ -27,11 +27,11 @@ class CheckDependenciesTest(unittest.TestCase):
                 lambda tag: tag == "halide-flatbuffers@23.5.26",
             )
 
-        self.assertEqual(len(check_deps.PLATFORMS), len(matrix))
+        self.assertEqual(len(check_deps.wheel_matrix("unused")), len(matrix))
         self.assertEqual({entry["pkg"] for entry in matrix}, {"wabt"})
         self.assertEqual(
             {entry["platform"] for entry in matrix},
-            {platform["platform"] for platform in check_deps.PLATFORMS},
+            {platform["platform"] for platform in check_deps.wheel_matrix("unused")},
         )
 
 
