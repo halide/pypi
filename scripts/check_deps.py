@@ -6,12 +6,11 @@ from __future__ import annotations
 import json
 import os
 import sys
-import urllib.error
-import urllib.request
 from collections.abc import Callable, Iterable
 from pathlib import Path
 
-import tomllib
+from github_releases import GitHubReleases
+from package_metadata import project_identity as metadata_project_identity
 
 PLATFORMS = (
     {
@@ -52,9 +51,7 @@ PLATFORMS = (
 
 
 def project_identity(package_dir: Path) -> tuple[str, str]:
-    with (package_dir / "pyproject.toml").open("rb") as file:
-        project = tomllib.load(file)["project"]
-    return project["name"], project["version"]
+    return metadata_project_identity(package_dir / "pyproject.toml")
 
 
 def missing_package_matrix(
@@ -72,20 +69,9 @@ def missing_package_matrix(
 
 
 def github_release_exists(tag: str) -> bool:
-    request = urllib.request.Request(
-        f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/releases/tags/{tag}",
-        headers={
-            "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
-            "Accept": "application/vnd.github+json",
-        },
-    )
-    try:
-        urllib.request.urlopen(request, timeout=30)
-        return True
-    except urllib.error.HTTPError as error:
-        if error.code == 404:
-            return False
-        raise
+    return GitHubReleases(
+        os.environ["GITHUB_REPOSITORY"], os.environ.get("GITHUB_TOKEN")
+    ).release_exists(tag)
 
 
 def main(arguments: list[str] | None = None) -> None:

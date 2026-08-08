@@ -18,6 +18,14 @@ class ValidatePackageMetadataTest(unittest.TestCase):
             path.write_text('[project]\nname = "example"\nversion = "1.0"\n')
             validate_package_metadata.validate(path)
 
+    def test_reads_project_identity(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / "pyproject.toml"
+            path.write_text('[project]\nname = "example"\nversion = "1.0"\n')
+            self.assertEqual(
+                validate_package_metadata.project_identity(path), ("example", "1.0")
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

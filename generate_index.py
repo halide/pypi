@@ -12,12 +12,13 @@ manifest.
 
 from __future__ import annotations
 
-import json
 import os
 import re
 import sys
-import urllib.request
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).with_name("scripts")))
+from github_releases import GitHubReleases
 
 REPO = os.environ.get("GITHUB_REPOSITORY", "halide/pypi")
 TOKEN = os.environ.get("GITHUB_TOKEN")
@@ -29,25 +30,8 @@ def normalize(name: str) -> str:
     return re.sub(r"[-_.]+", "-", name).lower()
 
 
-def api_get(path: str):
-    req = urllib.request.Request(f"https://api.github.com{path}")
-    req.add_header("Accept", "application/vnd.github+json")
-    if TOKEN:
-        req.add_header("Authorization", f"Bearer {TOKEN}")
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.load(resp)
-
-
 def list_all_releases() -> list[dict]:
-    releases = []
-    page = 1
-    while True:
-        batch = api_get(f"/repos/{REPO}/releases?per_page=100&page={page}")
-        if not batch:
-            break
-        releases.extend(batch)
-        page += 1
-    return releases
+    return list(GitHubReleases(REPO, TOKEN).releases())
 
 
 def project_for_tag(tag: str) -> str | None:

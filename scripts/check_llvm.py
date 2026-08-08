@@ -3,14 +3,13 @@
 
 from __future__ import annotations
 
-import json
 import os
 import sys
-import urllib.request
 from collections.abc import Callable, Iterable
 from pathlib import Path
 
-import tomllib
+from github_releases import GitHubReleases
+from package_metadata import project_metadata
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "packages" / "halide-llvm"))
 from _version_provider import get_commit_info, version_from_tag
@@ -35,31 +34,20 @@ def should_build(
 
 
 def package_name() -> str:
-    with (
+    return project_metadata(
         Path(__file__).parents[1] / "packages" / "halide-llvm" / "pyproject.toml"
-    ).open("rb") as file:
-        return tomllib.load(file)["project"]["name"]
+    )["name"]
 
 
 def github_release_asset_names(project: str) -> list[str]:
     names: list[str] = []
-    page = 1
-    while True:
-        request = urllib.request.Request(
-            f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/releases?per_page=100&page={page}",
-            headers={
-                "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
-                "Accept": "application/vnd.github+json",
-            },
-        )
-        with urllib.request.urlopen(request, timeout=30) as response:
-            releases = json.load(response)
-        if not releases:
-            return names
-        for release in releases:
-            if release["tag_name"].startswith(f"{project}@"):
-                names.extend(asset["name"] for asset in release.get("assets", []))
-        page += 1
+    releases = GitHubReleases(
+        os.environ["GITHUB_REPOSITORY"], os.environ.get("GITHUB_TOKEN")
+    )
+    for release in releases.releases():
+        if release["tag_name"].startswith(f"{project}@"):
+            names.extend(asset["name"] for asset in release.get("assets", []))
+    return names
 
 
 def main() -> None:

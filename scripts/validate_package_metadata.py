@@ -6,14 +6,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import tomllib
+from package_metadata import project_identity
 
 
 def validate(path: Path) -> None:
-    with path.open("rb") as file:
-        project = tomllib.load(file)["project"]
-    if not project.get("name") or not project.get("version"):
-        raise ValueError(f"{path}: project name and version are required")
+    project_identity(path)
 
 
 def main(arguments: list[str] | None = None) -> None:
