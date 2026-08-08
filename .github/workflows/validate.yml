@@ -1,0 +1,43 @@
+name: Validate packaging configuration
+
+on:
+  push:
+    paths:
+      - .github/actions/publish-releases/**
+      - .github/workflows/**
+      - .gitmodules
+      - generate_index.py
+      - scripts/**
+      - tests/**
+      - packages/**/pyproject.toml
+      - packages/**/CMakeLists.txt
+      - packages/**/toolchains/**
+  pull_request:
+    paths:
+      - .github/actions/publish-releases/**
+      - .github/workflows/**
+      - .gitmodules
+      - generate_index.py
+      - scripts/**
+      - tests/**
+      - packages/**/pyproject.toml
+      - packages/**/CMakeLists.txt
+      - packages/**/toolchains/**
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Validate index generator
+        run: python3 -m unittest discover -s tests
+      - name: Validate package metadata
+        run: >
+          python3 scripts/validate_package_metadata.py
+          packages/flatbuffers/pyproject.toml packages/wabt/pyproject.toml
+      - name: Validate Python sources
+        run: python3 -m compileall -q generate_index.py scripts packages/halide-llvm

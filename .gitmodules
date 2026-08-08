@@ -1,0 +1,6 @@
+[submodule "packages/flatbuffers/repo"]
+	path = packages/flatbuffers/repo
+	url = https://github.com/google/flatbuffers.git
+[submodule "packages/wabt/repo"]
+	path = packages/wabt/repo
+	url = https://github.com/WebAssembly/wabt.git

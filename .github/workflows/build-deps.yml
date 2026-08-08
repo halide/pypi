@@ -1,0 +1,157 @@
+name: Build dependency wheels
+
+on:
+  push:
+    paths:
+      - packages/flatbuffers/**
+      - packages/wabt/**
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    name: Check for missing package versions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      matrix: ${{ steps.check.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build a matrix for versions not yet released
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/check_deps.py packages/flatbuffers packages/wabt
+
+  build:
+    name: ${{ matrix.pkg }} / ${{ matrix.platform }}
+    needs: check
+    if: needs.check.outputs.should_build == 'true'
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container || '' }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.check.outputs.matrix) }}
+    env:
+      CMAKE_GENERATOR: Ninja
+      MACOSX_DEPLOYMENT_TARGET: "11"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up GCC 12 and Python (manylinux)
+        if: matrix.container
+        run: |
+          yum install -y gcc-toolset-12-gcc-c++
+          echo "/opt/rh/gcc-toolset-12/root/usr/bin" >> "$GITHUB_PATH"
+          echo "/opt/python/cp312-cp312/bin" >> "$GITHUB_PATH"
+
+      - name: Set up Python
+        if: ${{ !matrix.container && !matrix.docker_image }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up MSVC
+        if: matrix.msvc_arch
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.msvc_arch }}
+
+      - name: Install CMake and Ninja
+        if: ${{ !matrix.container && !matrix.docker_image }}
+        run: pip install cmake ninja
+
+      - name: Build wheel
+        if: ${{ !matrix.docker_image }}
+        run: pip wheel packages/${{ matrix.pkg }} -w dist/
+
+      - name: Build wheel (docker)
+        if: matrix.docker_image
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/project" -w /project \
+            -e PIN_GCC12=${{ matrix.pin_gcc12 && 'true' || 'false' }} \
+            ${{ matrix.docker_image }} bash -c '
+              set -euo pipefail
+              if [ "$PIN_GCC12" = true ]; then
+                yum install -y gcc-toolset-12-gcc-c++
+                export PATH="/opt/rh/gcc-toolset-12/root/usr/bin:$PATH"
+              fi
+              export PATH="/opt/python/cp312-cp312/bin:$PATH"
+              pip install cmake ninja
+              pip wheel packages/${{ matrix.pkg }} -w dist/
+            '
+
+      - name: Retag wheel
+        if: matrix.wheel_plat
+        shell: bash
+        run: |
+          pip install wheel
+          wheel tags --platform-tag ${{ matrix.wheel_plat }} --remove dist/*.whl
+
+      # FlatBuffers is header/static-library-only. auditwheel cannot repair
+      # that kind of wheel, so add the manylinux tag in that one case.
+      - name: Repair wheel (auditwheel)
+        if: ${{ matrix.manylinux_plat && !matrix.docker_image }}
+        run: |
+          pip install auditwheel
+          OUTPUT=$(auditwheel repair --plat ${{ matrix.manylinux_plat }} -w dist/ dist/*.whl 2>&1) || {
+            echo "$OUTPUT"
+            echo "$OUTPUT" | grep -q "does not look like a platform wheel" \
+              && pip install wheel && wheel tags --platform-tag ${{ matrix.manylinux_plat }} --remove dist/*.whl \
+              || exit 1
+          }
+          rm -f dist/*-linux_*.whl
+
+      - name: Repair wheel (auditwheel/docker)
+        if: ${{ matrix.manylinux_plat && matrix.docker_image }}
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/project" -w /project \
+            ${{ matrix.docker_image }} bash -c '
+              set -euo pipefail
+              export PATH="/opt/python/cp312-cp312/bin:$PATH"
+              pip install auditwheel
+              OUTPUT=$(auditwheel repair --plat ${{ matrix.manylinux_plat }} -w dist/ dist/*.whl 2>&1) || {
+                echo "$OUTPUT"
+                echo "$OUTPUT" | grep -q "does not look like a platform wheel" \
+                  && pip install wheel && wheel tags --platform-tag ${{ matrix.manylinux_plat }} --remove dist/*.whl \
+                  || exit 1
+              }
+              rm -f dist/*-linux_*.whl
+            '
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ matrix.pkg }}-${{ matrix.platform }}
+          path: dist/*.whl
+
+  publish:
+    name: Publish dependency releases
+    needs: [check, build]
+    if: needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheel-*
+          path: dist
+          merge-multiple: true
+      - uses: ./.github/actions/publish-releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  rebuild-index:
+    needs: publish
+    uses: ./.github/workflows/rebuild-index.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

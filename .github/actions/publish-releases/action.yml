@@ -1,0 +1,17 @@
+name: Publish Halide wheels
+description: Publish built Halide wheels as releases in this repository.
+
+inputs:
+  dist-dir:
+    description: Directory containing wheel artifacts.
+    required: false
+    default: dist
+
+runs:
+  using: composite
+  steps:
+    - name: Create or update releases
+      shell: bash
+      env:
+        DIST_DIR: ${{ inputs.dist-dir }}
+      run: python3 "$GITHUB_ACTION_PATH/../../../scripts/publish_releases.py"
