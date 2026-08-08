@@ -2,6 +2,7 @@ name: Build WABT wheels
 
 on:
   push:
+    branches: [main]
     paths:
       - packages/wabt/**
   workflow_dispatch: {}
