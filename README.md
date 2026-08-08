@@ -16,8 +16,8 @@ them.
   each link's hash fragment.
 - `scripts/` contains the release checks, metadata validation, and shared
   publisher logic; `tests/` covers those scripts and index generation.
-- `.github/actions/publish-releases/` is the common release publisher used by
-  every in-repository package workflow.
+- `.github/workflows/build-dependency.yml` is the reusable build/publish
+  workflow used by the FlatBuffers and WABT trigger workflows.
 
 All release tags have the form `<project>@<version>`, for example
 `halide-llvm@22.1.7`. The index generator discovers those tags automatically,
@@ -47,11 +47,12 @@ HALIDE_LLVM_REF=llvmorg-21.1.8 pip wheel packages/halide-llvm -w dist
 
 ## Publishing and index deployment
 
-`Build dependency wheels` runs for FlatBuffers/WABT path changes and manual
-dispatch. It checks whether each package version already has a release, then
-builds only missing packages across the supported platform matrix. `Build LLVM
-wheels` is intentionally separate: it runs weekly or by manual dispatch with
-an arbitrary `llvm_ref`, and only publishes after every platform build passes.
+`Build FlatBuffers wheels` and `Build WABT wheels` run independently for their
+respective package-path changes and manual dispatch. Each checks whether its
+package version already has a release, then builds only a missing version
+across the supported platform matrix. `Build LLVM wheels` is intentionally
+separate: it runs weekly or by manual dispatch with an arbitrary `llvm_ref`,
+and only publishes after every platform build passes.
 
 Both workflows publish assets to releases in **this** repository using the
 workflow `GITHUB_TOKEN` with `contents: write`. They then call the reusable

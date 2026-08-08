@@ -20,8 +20,9 @@ import tarfile
 import tempfile
 import urllib.error
 import urllib.request
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 # --- Configuration ---
 CACHE_ROOT = Path(__file__).parent / "src_cache"
@@ -209,9 +210,11 @@ def download_and_extract(ref: str, dest_dir: Path) -> None:
                 req = urllib.request.Request(url)
                 req.add_header("User-Agent", "halide-llvm-version-provider")
 
-                with urllib.request.urlopen(req, timeout=600) as response:
-                    with open(tarball, "wb") as f:
-                        shutil.copyfileobj(response, f)
+                with (
+                    urllib.request.urlopen(req, timeout=600) as response,
+                    open(tarball, "wb") as file,
+                ):
+                    shutil.copyfileobj(response, file)
 
                 break
             except urllib.error.HTTPError as e:

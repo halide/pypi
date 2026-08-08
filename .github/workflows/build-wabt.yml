@@ -1,0 +1,17 @@
+name: Build WABT wheels
+
+on:
+  push:
+    paths:
+      - packages/wabt/**
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-dependency.yml
+    with:
+      package: packages/wabt
+    permissions:
+      contents: write
+      pages: write
+      id-token: write

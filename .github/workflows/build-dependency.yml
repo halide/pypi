@@ -1,15 +1,16 @@
-name: Build dependency wheels
+name: Build dependency package
 
 on:
-  push:
-    paths:
-      - packages/flatbuffers/**
-      - packages/wabt/**
-  workflow_dispatch: {}
+  workflow_call:
+    inputs:
+      package:
+        description: Package directory to build.
+        required: true
+        type: string
 
 jobs:
   check:
-    name: Check for missing package versions
+    name: Check for an existing release
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -18,11 +19,11 @@ jobs:
       matrix: ${{ steps.check.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
-      - name: Build a matrix for versions not yet released
+      - name: Build a matrix for a missing package version
         id: check
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: python3 scripts/check_deps.py packages/flatbuffers packages/wabt
+        run: python3 scripts/check_deps.py ${{ inputs.package }}
 
   build:
     name: ${{ matrix.pkg }} / ${{ matrix.platform }}
@@ -68,7 +69,7 @@ jobs:
 
       - name: Build wheel
         if: ${{ !matrix.docker_image }}
-        run: pip wheel packages/${{ matrix.pkg }} -w dist/
+        run: pip wheel ${{ inputs.package }} -w dist/
 
       - name: Build wheel (docker)
         if: matrix.docker_image
@@ -83,7 +84,7 @@ jobs:
               fi
               export PATH="/opt/python/cp312-cp312/bin:$PATH"
               pip install cmake ninja
-              pip wheel packages/${{ matrix.pkg }} -w dist/
+              pip wheel ${{ inputs.package }} -w dist/
             '
 
       - name: Retag wheel
@@ -93,8 +94,6 @@ jobs:
           pip install wheel
           wheel tags --platform-tag ${{ matrix.wheel_plat }} --remove dist/*.whl
 
-      # FlatBuffers is header/static-library-only. auditwheel cannot repair
-      # that kind of wheel, so add the manylinux tag in that one case.
       - name: Repair wheel (auditwheel)
         if: ${{ matrix.manylinux_plat && !matrix.docker_image }}
         run: |
@@ -131,7 +130,7 @@ jobs:
           path: dist/*.whl
 
   publish:
-    name: Publish dependency releases
+    name: Publish dependency release
     needs: [check, build]
     if: needs.build.result == 'success'
     runs-on: ubuntu-latest
@@ -144,9 +143,10 @@ jobs:
           pattern: wheel-*
           path: dist
           merge-multiple: true
-      - uses: ./.github/actions/publish-releases
+      - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/publish_releases.py
 
   rebuild-index:
     needs: publish

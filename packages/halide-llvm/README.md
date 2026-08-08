@@ -1,7 +1,7 @@
 # halide-llvm
 
 Pre-built LLVM wheels for [Halide](https://github.com/halide/Halide), hosted on
-[pypi.halide-lang.org](https://pypi.halide-lang.org/). Builds against any
+[pypi.halide-lang.org](https://pypi.halide-lang.org/simple/). Builds against any
 arbitrary LLVM git reference (tag, branch, or commit SHA) and produces
 manylinux, macOS, and Windows wheels.
 
@@ -179,14 +179,14 @@ All toolchains include `initial-cache.cmake` which configures:
 
 ## CI Workflow
 
-The `build-wheels.yml` workflow builds and uploads wheels for all platforms:
+The `build-llvm.yml` workflow builds and uploads wheels for all platforms:
 
 ```bash
-gh workflow run build-wheels.yml -f llvm_ref=llvmorg-21.1.8
+gh workflow run build-llvm.yml -f llvm_ref=llvmorg-21.1.8
 ```
 
 It will skip the build if wheels for that ref already exist on
-pypi.halide-lang.org. Wheels are uploaded automatically after all platform
+https://pypi.halide-lang.org/simple/. Wheels are uploaded automatically after all platform
 builds succeed.
 
 ## Caching

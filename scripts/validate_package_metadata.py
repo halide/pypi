@@ -4,8 +4,9 @@
 from __future__ import annotations
 
 import sys
-import tomllib
 from pathlib import Path
+
+import tomllib
 
 
 def validate(path: Path) -> None:
@@ -16,7 +17,9 @@ def validate(path: Path) -> None:
 
 
 def main(arguments: list[str] | None = None) -> None:
-    paths = [Path(path) for path in (arguments if arguments is not None else sys.argv[1:])]
+    paths = [
+        Path(path) for path in (arguments if arguments is not None else sys.argv[1:])
+    ]
     if not paths:
         sys.exit("Pass one or more pyproject.toml files")
     for path in paths:

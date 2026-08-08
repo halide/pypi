@@ -71,7 +71,10 @@ def collect_files() -> dict[str, list[dict]]:
         tag = release["tag_name"]
         project = project_for_tag(tag)
         if project is None:
-            print(f"warning: skipping release {tag!r} (expected '<project>@<version>')", file=sys.stderr)
+            print(
+                f"warning: skipping release {tag!r} (expected '<project>@<version>')",
+                file=sys.stderr,
+            )
             continue
         bucket = files_by_project.setdefault(normalize(project), [])
         for asset in release.get("assets", []):
@@ -108,7 +111,9 @@ def render_project_page(project_display: str, files: list[dict]) -> str:
 
 
 def render_root_page(project_names: list[str]) -> str:
-    links = "\n".join(f'    <a href="{name}/">{name}</a><br/>' for name in sorted(project_names))
+    links = "\n".join(
+        f'    <a href="{name}/">{name}</a><br/>' for name in sorted(project_names)
+    )
     return (
         "<!DOCTYPE html>\n<html>\n  <head>\n"
         '    <meta name="pypi:repository-version" content="1.0">\n'
@@ -121,7 +126,9 @@ def main() -> None:
     simple_dir = OUT_DIR / "simple"
     simple_dir.mkdir(parents=True, exist_ok=True)
 
-    (simple_dir / "index.html").write_text(render_root_page(list(files_by_project.keys())))
+    (simple_dir / "index.html").write_text(
+        render_root_page(list(files_by_project.keys()))
+    )
 
     for norm, files in files_by_project.items():
         project_dir = simple_dir / norm

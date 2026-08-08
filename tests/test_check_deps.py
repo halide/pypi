@@ -1,8 +1,7 @@
+import sys
 import tempfile
 import unittest
 from pathlib import Path
-
-import sys
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "scripts"))
 import check_deps
@@ -30,9 +29,10 @@ class CheckDependenciesTest(unittest.TestCase):
 
         self.assertEqual(len(check_deps.PLATFORMS), len(matrix))
         self.assertEqual({entry["pkg"] for entry in matrix}, {"wabt"})
-        self.assertEqual({entry["platform"] for entry in matrix}, {
-            platform["platform"] for platform in check_deps.PLATFORMS
-        })
+        self.assertEqual(
+            {entry["platform"] for entry in matrix},
+            {platform["platform"] for platform in check_deps.PLATFORMS},
+        )
 
 
 if __name__ == "__main__":

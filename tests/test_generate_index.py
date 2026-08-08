@@ -34,15 +34,22 @@ class GenerateIndexTest(unittest.TestCase):
             },
             {"tag_name": "not-a-package-tag", "assets": []},
         ]
-        old_releases, old_out_dir = generate_index.list_all_releases, generate_index.OUT_DIR
+        old_releases, old_out_dir = (
+            generate_index.list_all_releases,
+            generate_index.OUT_DIR,
+        )
         try:
             generate_index.list_all_releases = lambda: releases
             with tempfile.TemporaryDirectory() as temporary_directory:
                 generate_index.OUT_DIR = Path(temporary_directory)
                 generate_index.main()
                 root = (generate_index.OUT_DIR / "simple/index.html").read_text()
-                llvm = (generate_index.OUT_DIR / "simple/halide-llvm/index.html").read_text()
-                flatbuffers = (generate_index.OUT_DIR / "simple/halide-flatbuffers/index.html").read_text()
+                llvm = (
+                    generate_index.OUT_DIR / "simple/halide-llvm/index.html"
+                ).read_text()
+                flatbuffers = (
+                    generate_index.OUT_DIR / "simple/halide-flatbuffers/index.html"
+                ).read_text()
         finally:
             generate_index.list_all_releases = old_releases
             generate_index.OUT_DIR = old_out_dir

@@ -33,6 +33,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - uses: pre-commit/action@v3.0.1
       - name: Validate index generator
         run: python3 -m unittest discover -s tests
       - name: Validate package metadata

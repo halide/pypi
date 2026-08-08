@@ -1,9 +1,8 @@
+import sys
 import tempfile
 import unittest
 import zipfile
 from pathlib import Path
-
-import sys
 
 sys.path.insert(0, str(Path(__file__).parents[1] / "scripts"))
 import publish_releases
@@ -23,8 +22,12 @@ class PublishReleasesTest(unittest.TestCase):
     def test_groups_wheels_by_embedded_metadata_not_filename(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             directory = Path(temporary_directory)
-            first = make_wheel(directory, "unexpected-name-one.whl", "Example-Project", "1.2.3")
-            second = make_wheel(directory, "unexpected-name-two.whl", "Example-Project", "1.2.3")
+            first = make_wheel(
+                directory, "unexpected-name-one.whl", "Example-Project", "1.2.3"
+            )
+            second = make_wheel(
+                directory, "unexpected-name-two.whl", "Example-Project", "1.2.3"
+            )
             other = make_wheel(directory, "another-file.whl", "other.project", "4.5.6")
             grouped = publish_releases.wheels_by_release([first, second, other])
 
@@ -52,8 +55,35 @@ class PublishReleasesTest(unittest.TestCase):
         )
 
         commands = [command for command, _ in calls]
-        self.assertIn(["gh", "release", "upload", "existing@1", "existing.whl", "--repo", "halide/pypi", "--clobber"], commands)
-        self.assertIn(["gh", "release", "create", "new@2", "new.whl", "--repo", "halide/pypi", "--title", "new@2", "--notes", "Automated build from Build wheels"], commands)
+        self.assertIn(
+            [
+                "gh",
+                "release",
+                "upload",
+                "existing@1",
+                "existing.whl",
+                "--repo",
+                "halide/pypi",
+                "--clobber",
+            ],
+            commands,
+        )
+        self.assertIn(
+            [
+                "gh",
+                "release",
+                "create",
+                "new@2",
+                "new.whl",
+                "--repo",
+                "halide/pypi",
+                "--title",
+                "new@2",
+                "--notes",
+                "Automated build from Build wheels",
+            ],
+            commands,
+        )
 
 
 if __name__ == "__main__":

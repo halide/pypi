@@ -6,13 +6,14 @@ from __future__ import annotations
 import json
 import os
 import sys
-import tomllib
 import urllib.request
 from collections.abc import Callable, Iterable
 from pathlib import Path
 
+import tomllib
+
 sys.path.insert(0, str(Path(__file__).parents[1] / "packages" / "halide-llvm"))
-from _version_provider import get_commit_info, version_from_tag  # noqa: E402
+from _version_provider import get_commit_info, version_from_tag
 
 
 def resolved_ref_and_pattern(
@@ -26,15 +27,17 @@ def resolved_ref_and_pattern(
     return sha, f"g{sha[:8]}"
 
 
-def should_build(ref: str, asset_names: Iterable[str], **providers: object) -> tuple[bool, str]:
+def should_build(
+    ref: str, asset_names: Iterable[str], **providers: object
+) -> tuple[bool, str]:
     resolved_ref, pattern = resolved_ref_and_pattern(ref, **providers)
     return not any(pattern in name for name in asset_names), resolved_ref
 
 
 def package_name() -> str:
-    with (Path(__file__).parents[1] / "packages" / "halide-llvm" / "pyproject.toml").open(
-        "rb"
-    ) as file:
+    with (
+        Path(__file__).parents[1] / "packages" / "halide-llvm" / "pyproject.toml"
+    ).open("rb") as file:
         return tomllib.load(file)["project"]["name"]
 
 
