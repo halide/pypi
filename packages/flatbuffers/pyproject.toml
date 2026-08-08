@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "halide-flatbuffers"
-version = "23.5.26"
+version = "25.12.19"
 maintainers = [{ name = "Alex Reinking", email = "areinking@adobe.com" }]
 license = { file = "./repo/LICENSE" }
 readme = "./repo/README.md"
