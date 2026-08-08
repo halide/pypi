@@ -12,3 +12,10 @@ repos:
       - id: ruff-check
         args: [--fix]
       - id: ruff-format
+  - repo: local
+    hooks:
+      - id: actionlint
+        name: actionlint
+        entry: actionlint
+        language: system
+        files: ^\.github/workflows/.*\.ya?ml$
