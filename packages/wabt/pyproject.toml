@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "halide-wabt"
-version = "1.0.39"
+version = "1.0.41"
 maintainers = [{ name = "Alex Reinking", email = "areinking@adobe.com" }]
 license = { file = "./repo/LICENSE" }
 readme = "./repo/README.md"
