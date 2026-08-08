@@ -4,7 +4,7 @@ on:
   workflow_call: {}
   push:
     paths:
-      - .github/actions/publish-releases/**
+      - .github/actions/**
       - .github/workflows/**
       - .gitmodules
       - generate_index.py
@@ -15,7 +15,7 @@ on:
       - packages/**/toolchains/**
   pull_request:
     paths:
-      - .github/actions/publish-releases/**
+      - .github/actions/**
       - .github/workflows/**
       - .gitmodules
       - generate_index.py

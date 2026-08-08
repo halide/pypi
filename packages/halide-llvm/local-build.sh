@@ -106,27 +106,12 @@ run_local_macos_build() {
 
 run_linux_docker_build() {
   local platform="$1"
-  local image dist_dir
+  local image dist_dir manylinux_plat needs_gcc12
   local toolchain="toolchains/$platform.cmake"
 
-  case "$platform" in
-  x86-64-linux)
-    image="quay.io/pypa/manylinux_2_28_x86_64"
-    ;;
-  x86-32-linux)
-    image="quay.io/pypa/manylinux_2_28_i686"
-    ;;
-  arm-64-linux)
-    image="quay.io/pypa/manylinux_2_28_aarch64"
-    ;;
-  arm-32-linux)
-    image="quay.io/pypa/manylinux_2_31_armv7l"
-    ;;
-  *)
-    echo "error: unsupported Linux Docker platform: $platform" >&2
-    exit 1
-    ;;
-  esac
+  image="$(python3 "$REPO_ROOT/scripts/platforms.py" "$platform" image)"
+  manylinux_plat="$(python3 "$REPO_ROOT/scripts/platforms.py" "$platform" manylinux_plat)"
+  needs_gcc12="$(python3 "$REPO_ROOT/scripts/platforms.py" "$platform" needs_gcc12)"
 
   dist_dir="dist/$platform"
   mkdir -p "$dist_dir"
@@ -141,16 +126,22 @@ run_linux_docker_build() {
     -v "$(pwd):/project" \
     -w /project \
     -e "HALIDE_LLVM_REF=$HALIDE_LLVM_REF" \
+    -e "NEEDS_GCC12=$needs_gcc12" \
     "$image" \
     bash -c "
       set -euo pipefail
+      if [ \"\$NEEDS_GCC12\" = true ]; then
+        yum install -y gcc-toolset-12-gcc-c++
+        export PATH=/opt/rh/gcc-toolset-12/root/usr/bin:\$PATH
+      fi
       export PATH=/opt/python/cp312-cp312/bin:\$PATH
 
+      pip install cmake ninja
       pip wheel . -w $dist_dir/ -v \
         --config-settings=cmake.define.CMAKE_TOOLCHAIN_FILE=$toolchain
 
       pip install auditwheel
-      auditwheel repair -w $dist_dir/ $dist_dir/*.whl
+      auditwheel repair --plat $manylinux_plat -w $dist_dir/ $dist_dir/*.whl
       rm -f $dist_dir/*-linux_*.whl
 
       echo
@@ -168,6 +159,7 @@ if [[ -z "$REF" || "$#" -gt 2 ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$SCRIPT_DIR"
 
 export HALIDE_LLVM_REF="$REF"

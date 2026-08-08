@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import argparse
+
 PLATFORMS = (
     {
         "platform": "x86-64-linux",
@@ -59,3 +61,29 @@ def platform(platform_name: str) -> dict[str, object]:
         if entry["platform"] == platform_name:
             return dict(entry)
     raise ValueError(f"unknown platform: {platform_name}")
+
+
+def platform_value(platform_name: str, field: str) -> str:
+    """Return a shell-friendly platform property for local build tooling."""
+    entry = platform(platform_name)
+    if field == "image":
+        value = entry.get("container") or entry.get("docker_image")
+    elif field == "needs_gcc12":
+        value = bool(entry.get("container") or entry.get("pin_gcc12"))
+    else:
+        value = entry.get(field)
+    if value is None:
+        raise ValueError(f"{platform_name}: no {field}")
+    return str(value).lower() if isinstance(value, bool) else str(value)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Query canonical wheel platforms")
+    parser.add_argument("platform")
+    parser.add_argument("field", choices=("image", "manylinux_plat", "needs_gcc12"))
+    arguments = parser.parse_args()
+    print(platform_value(arguments.platform, arguments.field))
+
+
+if __name__ == "__main__":
+    main()
