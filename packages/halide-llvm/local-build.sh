@@ -141,8 +141,7 @@ run_linux_docker_build() {
         --config-settings=cmake.define.CMAKE_TOOLCHAIN_FILE=$toolchain
 
       pip install auditwheel
-      auditwheel repair --plat $manylinux_plat -w $dist_dir/ $dist_dir/*.whl
-      rm -f $dist_dir/*-linux_*.whl
+      bash /project/scripts/repair-wheel.sh $manylinux_plat $dist_dir
 
       echo
       echo 'Built wheels:'
