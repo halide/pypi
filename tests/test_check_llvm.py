@@ -25,6 +25,12 @@ class CheckLlvmTest(unittest.TestCase):
         self.assertFalse(build)
         self.assertEqual(resolved, "deadbeef0123456789")
 
+    def test_llvm_matrix_uses_the_pinned_windows_runner_and_toolchains(self):
+        matrix = check_llvm.wheel_matrix("halide-llvm", llvm=True)
+        windows = next(item for item in matrix if item["platform"] == "x86-64-windows")
+        self.assertEqual(windows["runner"], "windows-2022")
+        self.assertEqual(windows["toolchain"], "x86-64-windows.cmake")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,8 +16,9 @@ them.
   each link's hash fragment.
 - `scripts/` contains the release checks, metadata validation, and shared
   publisher logic; `tests/` covers those scripts and index generation.
-- `.github/workflows/build-dependency.yml` is the reusable build/publish
-  workflow used by the FlatBuffers and WABT trigger workflows.
+- `scripts/platforms.py` defines the canonical platform matrix for CI and local
+  LLVM builds; `.github/actions/build-wheel/` performs the common build,
+  repair, and artifact-upload steps.
 
 All release tags have the form `<project>@<version>`, for example
 `halide-llvm@22.1.7`. The index generator discovers those tags automatically,

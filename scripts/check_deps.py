@@ -6,55 +6,16 @@ from __future__ import annotations
 import json
 import os
 import sys
-import urllib.error
-import urllib.request
 from collections.abc import Callable, Iterable
 from pathlib import Path
 
-import tomllib
-
-PLATFORMS = (
-    {
-        "platform": "x86-64-linux",
-        "runner": "ubuntu-latest",
-        "container": "quay.io/pypa/manylinux_2_28_x86_64",
-        "manylinux_plat": "manylinux_2_28_x86_64",
-    },
-    {
-        "platform": "x86-32-linux",
-        "runner": "ubuntu-latest",
-        "docker_image": "quay.io/pypa/manylinux_2_28_i686",
-        "manylinux_plat": "manylinux_2_28_i686",
-        "pin_gcc12": True,
-    },
-    {
-        "platform": "arm-64-linux",
-        "runner": "ubuntu-24.04-arm",
-        "container": "quay.io/pypa/manylinux_2_28_aarch64",
-        "manylinux_plat": "manylinux_2_28_aarch64",
-    },
-    {
-        "platform": "arm-32-linux",
-        "runner": "ubuntu-24.04-arm",
-        "docker_image": "quay.io/pypa/manylinux_2_31_armv7l",
-        "manylinux_plat": "manylinux_2_31_armv7l",
-    },
-    {"platform": "x86-64-macos", "runner": "macos-15-intel"},
-    {"platform": "arm-64-macos", "runner": "macos-15"},
-    {"platform": "x86-64-windows", "runner": "windows-latest", "msvc_arch": "amd64"},
-    {
-        "platform": "x86-32-windows",
-        "runner": "windows-latest",
-        "msvc_arch": "amd64_x86",
-        "wheel_plat": "win32",
-    },
-)
+from github_releases import GitHubReleases
+from package_metadata import project_identity as metadata_project_identity
+from platforms import wheel_matrix
 
 
 def project_identity(package_dir: Path) -> tuple[str, str]:
-    with (package_dir / "pyproject.toml").open("rb") as file:
-        project = tomllib.load(file)["project"]
-    return project["name"], project["version"]
+    return metadata_project_identity(package_dir / "pyproject.toml")
 
 
 def missing_package_matrix(
@@ -67,25 +28,14 @@ def missing_package_matrix(
         needed = not release_exists(tag)
         print(f"{tag}: {'needed' if needed else 'already released'}")
         if needed:
-            matrix.extend({"pkg": package.name, **platform} for platform in PLATFORMS)
+            matrix.extend(wheel_matrix(package.name))
     return matrix
 
 
 def github_release_exists(tag: str) -> bool:
-    request = urllib.request.Request(
-        f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/releases/tags/{tag}",
-        headers={
-            "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
-            "Accept": "application/vnd.github+json",
-        },
-    )
-    try:
-        urllib.request.urlopen(request, timeout=30)
-        return True
-    except urllib.error.HTTPError as error:
-        if error.code == 404:
-            return False
-        raise
+    return GitHubReleases(
+        os.environ["GITHUB_REPOSITORY"], os.environ.get("GITHUB_TOKEN")
+    ).release_exists(tag)
 
 
 def main(arguments: list[str] | None = None) -> None:
