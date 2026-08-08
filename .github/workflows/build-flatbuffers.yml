@@ -2,6 +2,7 @@ name: Build FlatBuffers wheels
 
 on:
   push:
+    branches: [main]
     paths:
       - packages/flatbuffers/**
   workflow_dispatch: {}
