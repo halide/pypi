@@ -22,7 +22,10 @@ PLATFORMS = (
     },
     {
         "platform": "x86-32-linux",
-        "runner": "ubuntu-latest",
+        # Pin to ubuntu-24.04: ubuntu-26.04 ships Docker 29.4.2, whose seccomp
+        # profile blocks socketcall(2) and breaks networking in i686 glibc
+        # containers (actions/runner-images#14790).
+        "runner": "ubuntu-24.04",
         "docker_image": "quay.io/pypa/manylinux_2_28_i686",
         "manylinux_plat": "manylinux_2_28_i686",
         "pin_gcc12": True,
