@@ -40,6 +40,8 @@ jobs:
       - name: Validate package metadata
         run: >
           python3 scripts/validate_package_metadata.py
-          packages/flatbuffers/pyproject.toml packages/wabt/pyproject.toml
+          packages/flatbuffers/pyproject.toml
+          packages/wabt/pyproject.toml
+          packages/zlib/pyproject.toml
       - name: Validate Python sources
         run: python3 -m compileall -q generate_index.py scripts packages/halide-llvm

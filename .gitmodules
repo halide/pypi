@@ -4,3 +4,6 @@
 [submodule "packages/wabt/repo"]
 	path = packages/wabt/repo
 	url = https://github.com/WebAssembly/wabt.git
+[submodule "packages/zlib/repo"]
+	path = packages/zlib/repo
+	url = https://github.com/madler/zlib.git

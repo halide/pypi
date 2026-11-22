@@ -32,6 +32,13 @@ CACHE_ROOT = Path(__file__).parent / "src_cache"
 # LLVM's linear main branch. Chosen to predate our entire support matrix.
 _EPOCH_COMMIT = "llvmorg-19-init"
 
+# Post-release suffixes for repackaged upstream LLVM tags (e.g. packaging or
+# build-configuration changes without a new upstream LLVM tag).
+POST_RELEASES: dict[str, int] = {
+    "llvmorg-22.1.8": 1,
+    "llvmorg-23.1.6": 1,
+}
+
 
 def dynamic_metadata(
     field: str,
@@ -92,7 +99,9 @@ def version_from_tag(ref: str) -> str | None:
     if tag_match:
         version = tag_match.group(1)
         rc = tag_match.group(2)
-        return f"{version}{rc or ''}"
+        post = POST_RELEASES.get(ref)
+        suffix = f".post{post}" if post else ""
+        return f"{version}{rc or ''}{suffix}"
     return None
 
 

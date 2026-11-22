@@ -1,5 +1,5 @@
 [build-system]
-requires = ["scikit-build-core>=0.10"]
+requires = ["scikit-build-core>=0.10", "halide-zlib~=1.3.2"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -8,6 +8,7 @@ dynamic = ["version"]
 description = "LLVM distribution for Halide"
 license = "Apache-2.0"
 requires-python = ">=3.10"
+dependencies = ["halide-zlib~=1.3.2"]
 
 [project.scripts]
 halide-llvm = "halide_llvm:main"

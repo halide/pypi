@@ -15,6 +15,31 @@ class CheckLlvmTest(unittest.TestCase):
         self.assertFalse(build)
         self.assertEqual(resolved, "llvmorg-21.1.8")
 
+    def test_post_release_tag_rebuilds_until_post_wheel_exists(self):
+        for ref, base in (("llvmorg-22.1.8", "22.1.8"), ("llvmorg-23.1.6", "23.1.6")):
+            self.assertEqual(check_llvm.version_from_tag(ref), f"{base}.post1")
+
+            build, resolved = check_llvm.should_build(
+                ref,
+                [f"halide_llvm-{base}-py3-none-any.whl"],
+            )
+            self.assertTrue(build)
+            self.assertEqual(resolved, ref)
+
+            build, resolved = check_llvm.should_build(
+                ref,
+                [
+                    f"halide_llvm-{base}-py3-none-any.whl",
+                    f"halide_llvm-{base}.post1-py3-none-any.whl",
+                ],
+            )
+            self.assertFalse(build)
+            self.assertEqual(resolved, ref)
+
+    def test_unlisted_release_tag_has_no_post_suffix(self):
+        self.assertEqual(check_llvm.version_from_tag("llvmorg-23.1.7"), "23.1.7")
+        self.assertEqual(check_llvm.version_from_tag("llvmorg-23.1.0-rc2"), "23.1.0rc2")
+
     def test_dev_ref_uses_resolved_commit_prefix(self):
         build, resolved = check_llvm.should_build(
             "main",

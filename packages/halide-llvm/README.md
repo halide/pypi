@@ -167,7 +167,7 @@ All toolchains include `initial-cache.cmake` which configures:
 - Projects: clang, lld, clang-tools-extra
 - Runtimes: compiler-rt, libcxx, libcxxabi, libunwind
 - Targets: AArch64, ARM, Hexagon, NVPTX, PowerPC, RISCV, WebAssembly, X86
-- Assertions, RTTI, and exception handling enabled
+- Assertions, RTTI, exception handling, and zlib (via `halide-zlib`) enabled
 - Unnecessary tools and features disabled for faster builds
 
 ## Environment Variables
