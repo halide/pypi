@@ -48,21 +48,31 @@ set(LLVM_INCLUDE_TESTS       OFF CACHE BOOL "")
 set(LLVM_INCLUDE_UTILS       OFF CACHE BOOL "")
 
 ##############################################################################
-# Install RPATHs
+# Runtimes sub-build settings & install RPATHs
 #
 # Ensure installed shared libraries (especially the LLVM runtimes: libc++,
 # libc++abi, libunwind) can find each other via relative paths. Without
 # this, CMake strips build-tree RPATHs at install time and leaves nothing.
-# RUNTIMES_CMAKE_ARGS forwards this to the separate runtimes sub-build.
+#
+# Also disable C++20 module dependency scanning in the runtimes sub-build:
+# CMake >= 3.28 (CMP0155=NEW, triggered since LLVM 24 bumped its minimum
+# CMake version to 3.31) scans C++20+ sources (e.g. libcxx/libcxxabi built
+# with -std=c++23) using clang-scan-deps, which we disable below to keep
+# wheel sizes down.
+#
+# RUNTIMES_CMAKE_ARGS forwards these to the separate runtimes sub-build.
 ##############################################################################
 
+set(_runtimes_cmake_args "-DCMAKE_CXX_SCAN_FOR_MODULES=OFF")
 if(APPLE)
   set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/../lib" CACHE STRING "")
-  set(RUNTIMES_CMAKE_ARGS "-DCMAKE_INSTALL_RPATH=@loader_path" CACHE STRING "")
+  list(APPEND _runtimes_cmake_args "-DCMAKE_INSTALL_RPATH=@loader_path")
 elseif(UNIX)
   set(CMAKE_INSTALL_RPATH "$ORIGIN;$ORIGIN/../lib" CACHE STRING "")
-  set(RUNTIMES_CMAKE_ARGS "-DCMAKE_INSTALL_RPATH=$ORIGIN" CACHE STRING "")
+  list(APPEND _runtimes_cmake_args "-DCMAKE_INSTALL_RPATH=$ORIGIN")
 endif()
+set(RUNTIMES_CMAKE_ARGS "${_runtimes_cmake_args}" CACHE STRING "")
+unset(_runtimes_cmake_args)
 
 ##############################################################################
 # Clang feature disables
@@ -105,6 +115,7 @@ set(CLANG_TOOL_CLANG_OFFLOAD_PACKAGER_BUILD OFF CACHE BOOL "")
 set(CLANG_TOOL_CLANG_REFACTOR_BUILD         OFF CACHE BOOL "")
 set(CLANG_TOOL_CLANG_RENAME_BUILD           OFF CACHE BOOL "")
 set(CLANG_TOOL_CLANG_REPL_BUILD             OFF CACHE BOOL "")
+# Disabled to keep wheel size down; requires CMAKE_CXX_SCAN_FOR_MODULES=OFF in RUNTIMES_CMAKE_ARGS.
 set(CLANG_TOOL_CLANG_SCAN_DEPS_BUILD        OFF CACHE BOOL "")
 set(CLANG_TOOL_CLANG_SHLIB_BUILD            OFF CACHE BOOL "")
 set(CLANG_TOOL_CLANG_SYCL_LINKER_BUILD      OFF CACHE BOOL "")
