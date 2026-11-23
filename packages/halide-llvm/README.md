@@ -161,7 +161,7 @@ Pre-configured toolchain files are provided in `toolchains/`:
 | `x86-64-macos.cmake`   | macOS x86-64 (native)                              |
 | `arm-64-macos.cmake`   | macOS arm-64 (native, Apple Silicon)               |
 | `x86-64-windows.cmake` | Windows x86-64 (native, requires vcvarsall)        |
-| `arm64-windows.cmake`   | Windows ARM64 (native, requires ARM64 vcvarsall)   |
+| `arm64-windows.cmake`  | Windows ARM64 (native, requires ARM64 vcvarsall)   |
 | `x86-32-windows.cmake` | Windows x86-32 (cross-compile, requires vcvarsall) |
 
 All toolchains include `initial-cache.cmake` which configures:
