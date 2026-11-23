@@ -54,16 +54,18 @@ set(LLVM_INCLUDE_UTILS       OFF CACHE BOOL "")
 # libc++abi, libunwind) can find each other via relative paths. Without
 # this, CMake strips build-tree RPATHs at install time and leaves nothing.
 #
-# Also disable C++20 module dependency scanning in the runtimes sub-build:
-# CMake >= 3.28 (CMP0155=NEW, triggered since LLVM 24 bumped its minimum
-# CMake version to 3.31) scans C++20+ sources (e.g. libcxx/libcxxabi built
-# with -std=c++23) using clang-scan-deps, which we disable below to keep
-# wheel sizes down.
+# Also disable C++20 module dependency scanning in the runtimes sub-build
+# (and nested compiler-rt add_custom_libcxx sub-builds such as libcxx_fuzzer
+# on Linux): CMake >= 3.28 (CMP0155=NEW, triggered since LLVM 24 bumped its
+# minimum CMake version to 3.31) scans C++20+ sources using clang-scan-deps,
+# which we disable below to keep wheel sizes down. Forwarding this via
+# CMAKE_TOOLCHAIN_FILE ensures compiler-rt's PASSTHROUGH_VARIABLES propagates
+# it to nested sub-builds too.
 #
 # RUNTIMES_CMAKE_ARGS forwards these to the separate runtimes sub-build.
 ##############################################################################
 
-set(_runtimes_cmake_args "-DCMAKE_CXX_SCAN_FOR_MODULES=OFF")
+set(_runtimes_cmake_args "-DCMAKE_TOOLCHAIN_FILE=${CMAKE_CURRENT_LIST_DIR}/runtimes.cmake")
 if(APPLE)
   set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/../lib" CACHE STRING "")
   list(APPEND _runtimes_cmake_args "-DCMAKE_INSTALL_RPATH=@loader_path")
@@ -115,7 +117,7 @@ set(CLANG_TOOL_CLANG_OFFLOAD_PACKAGER_BUILD OFF CACHE BOOL "")
 set(CLANG_TOOL_CLANG_REFACTOR_BUILD         OFF CACHE BOOL "")
 set(CLANG_TOOL_CLANG_RENAME_BUILD           OFF CACHE BOOL "")
 set(CLANG_TOOL_CLANG_REPL_BUILD             OFF CACHE BOOL "")
-# Disabled to keep wheel size down; requires CMAKE_CXX_SCAN_FOR_MODULES=OFF in RUNTIMES_CMAKE_ARGS.
+# Disabled to keep wheel size down; requires CMAKE_CXX_SCAN_FOR_MODULES=OFF in toolchains/runtimes.cmake.
 set(CLANG_TOOL_CLANG_SCAN_DEPS_BUILD        OFF CACHE BOOL "")
 set(CLANG_TOOL_CLANG_SHLIB_BUILD            OFF CACHE BOOL "")
 set(CLANG_TOOL_CLANG_SYCL_LINKER_BUILD      OFF CACHE BOOL "")
