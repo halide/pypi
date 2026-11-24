@@ -172,3 +172,25 @@ jobs:
       contents: read
       pages: write
       id-token: write
+
+  trigger-halide-upgrade:
+    name: Trigger halide-llvm upgrade in Halide
+    needs: publish
+    if: needs.publish.result == 'success'
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      # Reuses the App that halide/Halide's own upgrade-llvm.yml runs as, so
+      # that repo doesn't have to wait for its daily poll to notice a new
+      # halide-llvm release.
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          app-id: ${{ secrets.LLVM_UPDATER_ID }}
+          private-key: ${{ secrets.LLVM_UPDATER_PRIVATE_KEY }}
+          repositories: Halide
+
+      - name: Trigger halide/Halide's upgrade-llvm workflow
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: gh workflow run upgrade-llvm.yml --repo halide/Halide
