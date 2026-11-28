@@ -82,7 +82,7 @@ run_local_macos_build() {
   fi
 
   echo "Installing build dependencies..."
-  uv pip install --quiet "scikit-build-core>=0.10"
+  uv pip install --quiet "scikit-build-core>=0.10" ../zlib
 
   local config_settings=(
     "--config-settings=cmake.define.CMAKE_TOOLCHAIN_FILE=$toolchain_path"
@@ -141,6 +141,7 @@ run_linux_docker_build() {
     -v "$(pwd):/project" \
     -w /project \
     -e "HALIDE_LLVM_REF=$HALIDE_LLVM_REF" \
+    -e "PIP_EXTRA_INDEX_URL=https://pypi.halide-lang.org/simple/" \
     "$image" \
     bash -c "
       set -euo pipefail

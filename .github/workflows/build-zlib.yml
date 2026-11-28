@@ -1,0 +1,24 @@
+name: Build zlib wheels
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - packages/zlib/**
+  workflow_dispatch: {}
+
+jobs:
+  validate:
+    uses: ./.github/workflows/validate.yml
+    permissions:
+      contents: read
+
+  build:
+    needs: validate
+    uses: ./.github/workflows/build-dependency.yml
+    with:
+      package: packages/zlib
+    permissions:
+      contents: write
+      pages: write
+      id-token: write

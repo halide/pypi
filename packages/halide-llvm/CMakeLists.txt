@@ -44,12 +44,74 @@ if (NOT CMAKE_TOOLCHAIN_FILE)
 endif ()
 
 # =============================================================================
-# 4. Build LLVM
+# 4. Locate zlib (provided by the halide-zlib wheel)
+# =============================================================================
+# LLVM is built with LLVM_ENABLE_ZLIB=FORCE_ON against our static halide-zlib
+# package. Callers may pass -DZLIB_ROOT=... or set the ZLIB_ROOT environment
+# variable explicitly (e.g. when cross-compiling x86-32-windows from a 64-bit
+# Python environment); otherwise we locate the installed halide-zlib wheel via
+# Python's importlib.metadata.
+if (NOT ZLIB_ROOT AND NOT "$ENV{ZLIB_ROOT}" STREQUAL "")
+    set(ZLIB_ROOT "$ENV{ZLIB_ROOT}")
+endif ()
+
+if (NOT ZLIB_ROOT)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    execute_process(
+        COMMAND
+            "${Python3_EXECUTABLE}"
+            -c "from importlib.metadata import distribution; print(distribution('halide-zlib').locate_file('halide-zlib'))"
+        OUTPUT_VARIABLE _halide_zlib_root
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+    if (NOT IS_DIRECTORY "${_halide_zlib_root}")
+        message(FATAL_ERROR "Could not locate halide-zlib prefix: ${_halide_zlib_root}")
+    endif ()
+    file(TO_CMAKE_PATH "${_halide_zlib_root}" ZLIB_ROOT)
+    unset(_halide_zlib_root)
+else ()
+    file(TO_CMAKE_PATH "${ZLIB_ROOT}" ZLIB_ROOT)
+endif ()
+
+set(ZLIB_ROOT "${ZLIB_ROOT}" CACHE PATH "Root directory of halide-zlib" FORCE)
+set(ZLIB_USE_STATIC_LIBS ON CACHE BOOL "Link against static zlib" FORCE)
+message(STATUS "halide-llvm: Using ZLIB_ROOT=${ZLIB_ROOT}")
+
+# =============================================================================
+# 5. Build LLVM
 # =============================================================================
 add_subdirectory("${LLVM_SOURCE_DIR}/llvm" llvm-build)
 
 # =============================================================================
-# 5. Post-install cleanup: convert clang symlinks to wrappers
+# 6. Post-install fixup: point LLVMConfig.cmake at the sibling halide-zlib wheel
+# =============================================================================
+# LLVMConfig.cmake calls find_package(ZLIB) for the ZLIB::ZLIB target that
+# LLVMSupport links to, after setting ZLIB_ROOT to the build-time value above.
+# Rewrite it so installed wheels locate the sibling halide-zlib package in
+# site-packages (while still honoring a caller-supplied ZLIB_ROOT).
+install(CODE "set(HALIDE_LLVM_BUILD_ZLIB_ROOT \"${ZLIB_ROOT}\")")
+install(CODE [[
+    set(config "${CMAKE_INSTALL_PREFIX}/lib/cmake/llvm/LLVMConfig.cmake")
+    file(READ "${config}" contents)
+    set(baked_line "set(ZLIB_ROOT ${HALIDE_LLVM_BUILD_ZLIB_ROOT})")
+    string(FIND "${contents}" "${baked_line}" at)
+    if (at EQUAL -1)
+        message(FATAL_ERROR "Did not find '${baked_line}' in ${config}")
+    endif ()
+    set(replacement [=[if(NOT ZLIB_ROOT)
+    get_filename_component(_halide_zlib_root "${LLVM_INSTALL_PREFIX}/../../halide-zlib" ABSOLUTE)
+    if(EXISTS "${_halide_zlib_root}")
+      set(ZLIB_ROOT "${_halide_zlib_root}")
+    endif()
+    unset(_halide_zlib_root)
+  endif()]=])
+    string(REPLACE "${baked_line}" "${replacement}" contents "${contents}")
+    file(WRITE "${config}" "${contents}")
+]])
+
+# =============================================================================
+# 7. Post-install cleanup: convert clang symlinks to wrappers
 # =============================================================================
 # LLVM creates symlinks like clang++ -> clang, but wheels are ZIP files that
 # don't support symlinks. Each "symlink" becomes a full ~128MB copy.

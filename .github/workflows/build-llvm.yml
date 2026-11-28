@@ -55,6 +55,7 @@ jobs:
     env:
       HALIDE_LLVM_REF: ${{ matrix.ref }}
       GITHUB_TOKEN: ${{ github.token }}
+      PIP_EXTRA_INDEX_URL: https://pypi.halide-lang.org/simple/
       CMAKE_GENERATOR: Ninja
       MACOSX_DEPLOYMENT_TARGET: "11"
     steps:
@@ -82,6 +83,22 @@ jobs:
         with:
           arch: ${{ matrix.msvc_arch }}
 
+      # Cross-compiling x86-32-windows uses 64-bit host Python, so pip's
+      # isolated build env installs win_amd64 halide-zlib. Fetch the target
+      # platform's wheel explicitly and point CMake at it via ZLIB_ROOT.
+      - name: Stage target halide-zlib (cross-compile)
+        if: matrix.wheel_plat
+        shell: bash
+        run: |
+          ZLIB_REQ=$(python -c 'import tomllib; deps = tomllib.load(open("pyproject.toml", "rb"))["project"]["dependencies"]; print(next(d for d in deps if d.startswith("halide-zlib")))')
+          pip download --only-binary :all: --no-deps \
+            --platform "${{ matrix.wheel_plat }}" \
+            --python-version 3.12 \
+            --implementation py --abi none \
+            -d zlib-wheel "$ZLIB_REQ"
+          python -m zipfile -e zlib-wheel/halide_zlib-*.whl zlib-stage
+          python -c 'import pathlib; print("ZLIB_ROOT=" + str(pathlib.Path("zlib-stage/halide-zlib").resolve()))' >> "$GITHUB_ENV"
+
       - name: Build wheel
         if: ${{ !matrix.docker_image }}
         run: >
@@ -103,7 +120,7 @@ jobs:
           docker run --rm \
             -v "${{ github.workspace }}:/project" \
             -w /project/packages/halide-llvm \
-            -e HALIDE_LLVM_REF -e GITHUB_TOKEN \
+            -e HALIDE_LLVM_REF -e GITHUB_TOKEN -e PIP_EXTRA_INDEX_URL \
             -e PIN_GCC12=${{ matrix.pin_gcc12 && 'true' || 'false' }} \
             ${{ matrix.docker_image }} bash -c '
               set -euo pipefail
